@@ -1,0 +1,83 @@
+install.packages("rvest")
+library(rvest)
+install.packages("tm")
+library(tm)
+install.packages("wordcloud")
+library(wordcloud)
+install.packages("SnowballC")
+library(SnowballC)
+library(rvest)
+install.packages("dplyr")
+library(dplyr)
+url<-"https://www.amazon.com/Nutella-Chocolate-Hazelnut-Spread-26-5/product-reviews/B008TMIO2M/ref=cm_cr_arp_d_paging_btm_next_2?ie=UTF8&reviewerType=all_reviews&pageNumber="
+reviews <- lapply(paste0(url, 1:10), function(url){
+  Sys.sleep(5)  
+  url %>% 
+    read_html() %>% 
+    html_nodes("[data-hook='review-body']") %>% 
+    html_text()  %>%
+    gsub('[\r\n\t]', '', .) %>%
+    trimws(., "l")}) 
+ratings <- lapply(paste0(url, 1:10), function(url){
+  Sys.sleep(5)  
+  url %>% 
+    read_html() %>% 
+    html_nodes("[data-hook='review-star-rating']") %>% 
+    html_text()   
+  
+})  
+
+dates <- lapply(paste0(url, 1:10), function(url){
+  Sys.sleep(5)  
+  url %>% 
+    read_html() %>% 
+    html_nodes("[data-hook='review-date']") %>% 
+    html_text()   
+  
+})
+
+reviews <- unlist(reviews)
+ratings <- unlist(ratings)
+dates <- unlist(dates)
+
+write.csv(reviews,"/Users/fateme/Documents/Fall2022/Customer behavior/Final/reviews.csv")  
+write.csv(ratings, "/Users/fateme/Documents/Fall2022/Customer behavior/Final/ratings.csv")  
+write.csv(dates, "/Users/fateme/Documents/Fall2022/Customer behavior/Final/dates.csv") 
+################################ Word cloud###############################
+library(tm)
+library(wordcloud)
+library(SnowballC)
+
+library(readr)
+
+my_custom_stopwords <- c("amazon", "one", "two", "three", "four", "five", 
+                         "bit", "half",
+                         "like", "great", "good", "bad",
+                         "received", "arrived", "came", "get", "got", 
+                         "box", "yummy",
+                         "since", "even", "will", "can", "do", "did", 
+                         "done",
+                         "still", "also", "able", "really", "about")
+reviews <- read.csv('/Users/fateme/Documents/Fall2022/Customer behavior/reviews.csv', 
+                    stringsAsFactors = FALSE)
+
+getwd()
+setwd("/Users/fateme/Documents/Fall2022/Customer behavior/Final")
+getwd()
+reviews <- read.csv("reviews.csv")
+docs <- VCorpus(x = VectorSource(reviews$x), readerControl = 
+                  list(reader=readPlain, language="en"))
+docs <- tm_map(docs, removeNumbers)
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, stripWhitespace)
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeWords, c(stopwords("english"), 
+                                    my_custom_stopwords))
+dtm <- TermDocumentMatrix(docs)
+matrix <- as.matrix(dtm)
+words <- sort(rowSums(matrix),decreasing=TRUE)
+df <- data.frame(word = names(words),freq=words)
+set.seed(1234)
+wordcloud(words = df$word, freq = df$freq, min.freq = 3, 
+          random.order=FALSE, rot.per=0.35,  colors=brewer.pal(8, "Dark2"))
+
